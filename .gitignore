@@ -1,0 +1,6 @@
+# Private files
+private/
+
+# Operating system files
+.DS_Store
+Thumbs.db
