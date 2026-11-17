@@ -1,15 +1,15 @@
 :root {
-  --bg: #070b10;
-  --surface: #111820;
-  --surface-alt: #0f171f;
-  --surface-strong: #151f2a;
-  --text: #edf5ff;
-  --muted: #b3c0cd;
-  --border: rgba(117, 145, 170, 0.28);
-  --accent: #5ce1ff;
-  --accent-strong: #8ee8ff;
-  --link: #7ae4ff;
-  --shadow: rgba(0, 0, 0, 0.28);
+  --bg: #f1f7fc;
+  --surface: #ffffff;
+  --surface-alt: #eaf2fa;
+  --surface-strong: #e1ebf5;
+  --text: #172b4d;
+  --muted: #44546a;
+  --border: rgba(23, 43, 77, 0.18);
+  --accent: #2463a6;
+  --accent-strong: #1d508a;
+  --link: #205b9b;
+  --shadow: rgba(23, 43, 77, 0.1);
 }
 
 * {
@@ -133,7 +133,7 @@ li + li {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(7, 11, 16, 0.92);
+  background: rgba(241, 247, 252, 0.94);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(10px);
 }
@@ -213,7 +213,7 @@ li + li {
 .button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #061018;
+  color: #ffffff;
 }
 
 .button.primary:hover,
@@ -229,7 +229,7 @@ li + li {
 
 .button.secondary:hover,
 .button.secondary:focus-visible {
-  background: rgba(92, 225, 255, 0.08);
+  background: rgba(36, 99, 166, 0.08);
   text-decoration: none;
 }
 
