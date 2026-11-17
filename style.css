@@ -469,3 +469,59 @@ li + li {
     white-space: normal;
   }
 }
+
+@media (max-width: 480px) {
+  .section {
+    padding: 2.75rem 0;
+  }
+
+  .intro-section {
+    padding-top: 2rem;
+  }
+
+  .intro-heading h1 {
+    font-size: clamp(2rem, 8vw, 2.5rem);
+    margin-bottom: 0;
+  }
+
+  .section-inner {
+    gap: 1.25rem;
+  }
+
+  .nav-wrap {
+    gap: 0.45rem;
+    padding: 0.6rem 0;
+    padding-right: 0;
+  }
+
+  .brand {
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
+  }
+
+  .site-nav {
+    width: 100%;
+    gap: 0.35rem 0.8rem;
+  }
+
+  .site-nav a {
+    padding: 0.1rem 0;
+    font-size: 0.88rem;
+  }
+
+  .theme-toggle {
+    top: 0.6rem;
+  }
+
+  .job,
+  .edu-item,
+  .project-card,
+  .skill-group {
+    padding: 1.1rem;
+  }
+
+  .job + .job,
+  .edu-item + .edu-item {
+    margin-top: 0;
+  }
+}
