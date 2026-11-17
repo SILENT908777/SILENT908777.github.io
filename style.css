@@ -216,6 +216,28 @@ li + li {
   align-items: center;
 }
 
+.intro-heading {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.intro-photo {
+  width: 168px;
+  height: 168px;
+  flex: 0 0 168px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+}
+
+@media (min-width: 821px) {
+  .intro-heading h1 {
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    margin-bottom: 0;
+  }
+}
+
 .lead {
   font-size: 1.12rem;
   color: var(--muted);
@@ -407,6 +429,12 @@ li + li {
   .skills-layout,
   .project-grid {
     grid-template-columns: 1fr;
+  }
+
+  .intro-heading {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
 
   .site-header {
