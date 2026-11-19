@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,40 +11,34 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
     <script>
-      (() => {
-        const root = document.documentElement;
-        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
-
-        try {
-          const savedTheme = localStorage.getItem("portfolio-theme");
-          root.dataset.theme =
-            savedTheme === "light" || savedTheme === "dark"
-              ? savedTheme
-              : systemTheme.matches
-                ? "dark"
-                : "light";
-        } catch (error) {
-          console.warn("Unable to read the saved theme preference; using the system theme.", error);
-          root.dataset.theme = systemTheme.matches ? "dark" : "light";
+      try {
+        const theme = localStorage.getItem("portfolio-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
         }
-      })();
+      } catch {
+        // Keep the default theme if storage is unavailable.
+      }
     </script>
     <link rel="stylesheet" href="style.css" />
+    <link rel="preload" href="images/lab-cube.jpg" as="image" />
     <script defer src="script.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <canvas class="network-canvas" data-network-canvas aria-hidden="true"></canvas>
     <header class="site-header">
       <div class="container nav-wrap">
-        <a class="brand" href="#intro">Omar Gomez-Vivanco</a>
-        <nav aria-label="Main navigation" class="site-nav">
+        <a class="brand" href="#intro"><span class="brand-mark" aria-hidden="true">OG</span> Omar Gomez-Vivanco</a>
+        <button class="menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" hidden>Menu</button>
+        <nav id="site-nav" aria-label="Main navigation" class="site-nav">
+          <a href="#projects">Projects</a>
           <a href="#about">About</a>
           <a href="#experience">Experience</a>
-          <a href="#projects">Projects</a>
           <a href="#education">Education</a>
           <a href="#skills">Skills</a>
           <a href="#contact">Contact</a>
@@ -53,49 +47,91 @@
           class="theme-toggle"
           type="button"
           data-theme-toggle
-          aria-pressed="false"
-        >Dark mode</button>
+        >Light mode</button>
       </div>
     </header>
 
-    <main>
+    <main id="main" tabindex="-1">
       <section id="intro" class="section intro-section">
         <div class="container intro-grid">
           <div class="intro-copy">
-            <div class="intro-heading">
-              <img
-                class="intro-photo"
-                src="images/photo.jpg"
-                alt="Omar Gomez-Vivanco"
-              />
-              <div>
-                <p class="eyebrow">Cybersecurity Student | Help Desk Technician</p>
-                <h1>Omar Gomez-Vivanco</h1>
-              </div>
-            </div>
-            <p class="lead">
-              I’m Omar, a cybersecurity student and Help Desk Technician at Mercy University. I help people solve everyday technology problems while developing my skills in network defense and security testing.
-            </p>
+            <p class="eyebrow">Cybersecurity student <span aria-hidden="true">/</span> Help desk technician</p>
+            <h1>Omar<br />Gomez-Vivanco<span>.</span></h1>
+            <p class="lead">I build virtual labs for network defense and identity management, and help students and staff solve IT problems at Mercy University.</p>
             <div class="button-row">
-              <a class="button primary" href="#contact">Contact</a>
-              <a
-                class="button secondary"
-                href="https://www.linkedin.com/in/omargomez-vivanco"
-                target="_blank"
-                rel="noreferrer"
-                >LinkedIn</a
-              >
+              <a class="button primary" href="#projects">Explore the labs</a>
+              <a class="button secondary" href="resume.pdf" target="_blank" rel="noreferrer">View résumé</a>
             </div>
           </div>
-          <aside class="intro-panel" aria-label="Professional summary">
-            <h2>Profile</h2>
-            <ul>
-              <li>Cybersecurity student</li>
-              <li>Help desk support experience</li>
-              <li>Networking lab work</li>
-              <li>Interest in network defense and penetration testing</li>
-            </ul>
-          </aside>
+          <div class="lab-stage">
+            <p class="stage-label" id="lab-view-label">Inside the lab</p>
+            <div class="stage-controls" role="group" aria-labelledby="lab-view-label">
+              <label><input type="radio" name="lab-view" value="identity" checked /> Identity</label>
+              <label><input type="radio" name="lab-view" value="assessment" /> Assessment</label>
+              <label><input type="radio" name="lab-view" value="response" /> Response</label>
+            </div>
+            <div class="stage-art" aria-hidden="true"><div class="stage-core"></div></div>
+            <div class="stage-readouts">
+              <div class="stage-readout identity">
+                <p class="eyebrow">Proxmox · Active Directory</p>
+                <p class="stage-title">Enterprise identity lab</p>
+                <p class="stage-summary">Windows Server, Windows 11 clients, and Group Policy in a virtual domain.</p>
+                <a href="#lab-identity">View lab</a>
+              </div>
+              <div class="stage-readout assessment">
+                <p class="eyebrow">Kali Linux · Nmap</p>
+                <p class="stage-title">Vulnerability assessment</p>
+                <p class="stage-summary">Host and service discovery in a controlled security lab.</p>
+                <a href="#lab-assessment">View lab</a>
+              </div>
+              <div class="stage-readout response">
+                <p class="eyebrow">Virtual machines</p>
+                <p class="stage-title">Incident response simulation</p>
+                <p class="stage-summary">Diagnosis, investigation, and response planning in virtual machines.</p>
+                <a href="#lab-response">View lab</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="projects" class="section">
+        <div class="container section-inner">
+          <div class="section-heading">
+            <h2>Security labs<span>.</span></h2>
+          </div>
+
+          <div class="project-grid">
+            <article class="project-card" id="lab-identity" tabindex="-1">
+              <p class="project-category">Virtualization &amp; identity</p>
+              <h3>Proxmox and Active Directory Lab</h3>
+              <p>
+                Built a lab environment with a Windows Server domain controller,
+                Windows 11 clients, and a Kali Linux host. This work included Active
+                Directory user management, security groups, and Group Policy
+                configuration for a realistic enterprise setup.
+              </p>
+            </article>
+
+            <article class="project-card" id="lab-assessment" tabindex="-1">
+              <p class="project-category">Security assessment</p>
+              <h3>Lab-Based Vulnerability Assessment</h3>
+              <p>
+                Conducted authorized vulnerability assessments and penetration testing
+                activities using Kali Linux and Nmap in a controlled lab.
+              </p>
+            </article>
+
+            <article class="project-card" id="lab-response" tabindex="-1">
+              <p class="project-category">Incident response</p>
+              <h3>Incident Response Simulation</h3>
+              <p>
+                Simulated incident response scenarios in virtual machines to practice
+                diagnosis, investigation, and response planning within a security
+                environment.
+              </p>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -105,13 +141,16 @@
             <p class="eyebrow">About</p>
             <h2>Building a foundation in cybersecurity and support.</h2>
           </div>
-          <div class="content-block">
+          <div class="content-block about-profile">
+            <img src="images/photo.jpg" alt="Omar Gomez-Vivanco" loading="lazy" />
+            <div>
             <p>
               My interest in cybersecurity grew through supporting users and working in hands-on labs. At Mercy University’s IT Help Desk, I assist students and staff with software, browser, and account access issues. Previously, as a Lead Technical Assistant at Westchester Community College, I supported classroom technology and cybersecurity lab environments.
             </p>
             <p>
               Outside of work, I build virtual labs to practice Active Directory administration, Windows and Linux configuration, and vulnerability assessment. My goal is to become a penetration tester and cybersecurity consultant, helping organizations identify vulnerabilities and strengthen their defenses. I am also fluent in Spanish.
             </p>
+            </div>
           </div>
         </div>
       </section>
@@ -175,44 +214,6 @@
               <li>Tested security camera functionality using UniFi software.</li>
             </ul>
           </article>
-        </div>
-      </section>
-
-      <section id="projects" class="section">
-        <div class="container section-inner">
-          <div class="section-heading">
-            <p class="eyebrow">Projects and Labs</p>
-            <h2>Hands-on security and systems work.</h2>
-          </div>
-
-          <div class="project-grid">
-            <article class="project-card">
-              <h3>Proxmox and Active Directory Lab</h3>
-              <p>
-                Built a lab environment with a Windows Server domain controller,
-                Windows 11 clients, and a Kali Linux host. This work included Active
-                Directory user management, security groups, and Group Policy
-                configuration for a realistic enterprise setup.
-              </p>
-            </article>
-
-            <article class="project-card">
-              <h3>Lab-Based Vulnerability Assessment</h3>
-              <p>
-                Conducted authorized vulnerability assessments and penetration testing
-                activities using Kali Linux and Nmap in a controlled lab.
-              </p>
-            </article>
-
-            <article class="project-card">
-              <h3>Incident Response Simulation</h3>
-              <p>
-                Simulated incident response scenarios in virtual machines to practice
-                diagnosis, investigation, and response planning within a security
-                environment.
-              </p>
-            </article>
-          </div>
         </div>
       </section>
 
@@ -302,6 +303,7 @@
     <footer class="site-footer">
       <div class="container footer-wrap">
         <p>© <span data-current-year></span> Omar Gomez-Vivanco</p>
+        <a href="#intro">Back to top</a>
       </div>
     </footer>
   </body>

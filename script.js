@@ -2,12 +2,46 @@ document.addEventListener("DOMContentLoaded", () => {
   const yearNode = document.querySelector("[data-current-year]");
   const themeToggle = document.querySelector("[data-theme-toggle]");
   const networkCanvas = document.querySelector("[data-network-canvas]");
+  const menuToggle = document.querySelector(".menu-toggle");
+  const navigation = document.querySelector("#site-nav");
+  const compactNavigation = window.matchMedia("(max-width: 960px)");
+
+  if (menuToggle && navigation) {
+    const setMenuOpen = (open) => {
+      menuToggle.setAttribute("aria-expanded", String(open));
+    };
+    const updateMenu = () => {
+      menuToggle.hidden = !compactNavigation.matches;
+      setMenuOpen(false);
+    };
+
+    updateMenu();
+    compactNavigation.addEventListener("change", updateMenu);
+    menuToggle.addEventListener("click", () => {
+      setMenuOpen(menuToggle.getAttribute("aria-expanded") === "false");
+    });
+    navigation.addEventListener("click", (event) => {
+      const link = event.target.closest("a");
+      if (compactNavigation.matches && link) {
+        setMenuOpen(false);
+        const destination = document.getElementById(link.hash.slice(1));
+        destination?.setAttribute("tabindex", "-1");
+        destination?.focus({ preventScroll: true });
+      }
+    });
+    menuToggle.closest("header").addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && menuToggle.getAttribute("aria-expanded") === "true") {
+        setMenuOpen(false);
+        menuToggle.focus();
+      }
+    });
+  }
 
   if (yearNode) {
     yearNode.textContent = new Date().getFullYear();
   }
 
-  if (networkCanvas instanceof HTMLCanvasElement) {
+  if (networkCanvas) {
     initializeNetworkBackground(networkCanvas);
   }
 
@@ -16,21 +50,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const root = document.documentElement;
-  const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
-  let hasSavedTheme = false;
-
-  try {
-    const savedTheme = localStorage.getItem("portfolio-theme");
-    hasSavedTheme = savedTheme === "light" || savedTheme === "dark";
-  } catch (error) {
-    console.warn("Unable to read the saved theme preference.", error);
-  }
 
   const updateTheme = (theme) => {
     root.dataset.theme = theme;
     themeToggle.textContent = theme === "dark" ? "Light mode" : "Dark mode";
     themeToggle.setAttribute("aria-label", `Switch to ${theme === "dark" ? "light" : "dark"} theme`);
-    themeToggle.setAttribute("aria-pressed", String(theme === "dark"));
   };
 
   updateTheme(root.dataset.theme);
@@ -38,18 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
   themeToggle.addEventListener("click", () => {
     const theme = root.dataset.theme === "dark" ? "light" : "dark";
     updateTheme(theme);
-    hasSavedTheme = true;
 
     try {
       localStorage.setItem("portfolio-theme", theme);
     } catch (error) {
       console.warn("Unable to save the theme preference.", error);
-    }
-  });
-
-  systemTheme.addEventListener("change", (event) => {
-    if (!hasSavedTheme) {
-      updateTheme(event.matches ? "dark" : "light");
     }
   });
 });
@@ -62,7 +79,9 @@ function initializeNetworkBackground(canvas) {
   }
 
   const root = document.documentElement;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let particles = [];
+  let connections = new Uint8Array();
   let animationFrame = null;
   let width = 0;
   let height = 0;
@@ -73,8 +92,12 @@ function initializeNetworkBackground(canvas) {
   let alternateDotColor = "";
   let lineColor = "";
   let glowColor = "";
+  let starColor = "";
+  let starCoreColor = "";
+  let starGlowColor = "";
   let shootingStar = null;
-  let nextShootingStarIn = 2.5 + Math.random() * 2;
+  const starInterval = () => 2 + Math.random() * 2;
+  let nextShootingStarIn = 0.75 + Math.random() * 0.35;
   let lastFrameTime = null;
   let animationElapsed = 0;
   let parallaxX = 0;
@@ -88,6 +111,9 @@ function initializeNetworkBackground(canvas) {
     alternateDotColor = styles.getPropertyValue("--network-dot-alt").trim();
     lineColor = styles.getPropertyValue("--network-line").trim();
     glowColor = styles.getPropertyValue("--network-glow").trim();
+    starColor = styles.getPropertyValue("--network-star").trim();
+    starCoreColor = styles.getPropertyValue("--network-star-core").trim();
+    starGlowColor = styles.getPropertyValue("--network-star-glow").trim();
   };
 
   const createParticles = () => {
@@ -99,23 +125,26 @@ function initializeNetworkBackground(canvas) {
     particles = Array.from({ length: particleCount }, () => {
       const z = Math.random() * depthRange;
       const scale = focalLength / (focalLength + z);
+      const direction = Math.random() * Math.PI * 2;
+      const speed = 15 + Math.random() * 13;
 
       return {
         x: (Math.random() - 0.5) * (width / scale),
         y: (Math.random() - 0.5) * (height / scale),
         z,
-        vx: (Math.random() - 0.5) * 13.2,
-        vy: (Math.random() - 0.5) * 13.2,
-        vz: (Math.random() - 0.5) * 28,
+        vx: Math.cos(direction) * speed,
+        vy: Math.sin(direction) * speed,
+        vz: (Math.random() - 0.5) * 40,
       };
     });
+    connections = new Uint8Array(particleCount);
   };
 
   const resize = () => {
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    width = window.innerWidth;
-    height = window.innerHeight;
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
     isMobile = width <= 600 || window.matchMedia("(pointer: coarse)").matches;
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
     focalLength = Math.max(280, Math.min(width, height) * 0.9);
     depthRange = Math.max(420, Math.min(width, height) * 0.9);
 
@@ -128,66 +157,78 @@ function initializeNetworkBackground(canvas) {
     canvas.height = Math.round(height * pixelRatio);
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     createParticles();
-    draw();
+    if (!document.hidden) draw();
   };
 
   const drawShootingStar = () => {
     const progress = shootingStar.elapsed / shootingStar.duration;
-    const fade = Math.sin(progress * Math.PI);
+    const fade = Math.min(1, progress / 0.16, (1 - progress) / 0.32) *
+      (reducedMotion.matches ? 0.75 : 1);
     const x = shootingStar.x + shootingStar.vx * shootingStar.elapsed;
     const y = shootingStar.y + shootingStar.vy * shootingStar.elapsed;
-    const speed = Math.hypot(shootingStar.vx, shootingStar.vy);
-    const tailTime = shootingStar.tailLength / speed;
-    const tailX = x - shootingStar.vx * tailTime;
-    const tailY = y - shootingStar.vy * tailTime;
+    const tailX = x - shootingStar.tailX;
+    const tailY = y - shootingStar.tailY;
     const trail = context.createLinearGradient(tailX, tailY, x, y);
 
-    trail.addColorStop(0, "rgba(35, 170, 255, 0)");
-    trail.addColorStop(0.68, `rgba(40, 184, 255, ${fade * 0.52})`);
-    trail.addColorStop(1, `rgba(166, 248, 255, ${fade})`);
+    trail.addColorStop(0, `rgb(${starColor} / 0)`);
+    trail.addColorStop(0.45, `rgb(${starColor} / 0.34)`);
+    trail.addColorStop(0.82, `rgb(${starColor} / 0.86)`);
+    trail.addColorStop(1, `rgb(${starCoreColor})`);
 
     context.save();
     context.lineCap = "round";
-    context.lineWidth = 2;
     context.strokeStyle = trail;
-    context.shadowBlur = 13;
-    context.shadowColor = glowColor;
+    context.shadowColor = starGlowColor;
     context.beginPath();
     context.moveTo(tailX, tailY);
     context.lineTo(x, y);
+    context.globalAlpha = fade * 0.38;
+    context.lineWidth = isMobile ? 5 : 8;
+    context.shadowBlur = isMobile ? 9 : 19;
+    context.stroke();
+    context.globalAlpha = fade;
+    context.lineWidth = isMobile ? 2.1 : 2.8;
+    context.shadowBlur = 0;
     context.stroke();
 
-    context.fillStyle = `rgba(210, 250, 255, ${fade})`;
-    context.shadowBlur = 16;
+    context.fillStyle = `rgb(${starCoreColor})`;
+    context.shadowBlur = isMobile ? 12 : 22;
     context.beginPath();
-    context.arc(x, y, 2, 0, Math.PI * 2);
+    context.arc(x, y, isMobile ? 2.6 : 3.4, 0, Math.PI * 2);
     context.fill();
     context.restore();
   };
 
   const updateShootingStar = (elapsedSeconds) => {
+    nextShootingStarIn -= elapsedSeconds;
+
     if (shootingStar) {
       shootingStar.elapsed += elapsedSeconds;
       if (shootingStar.elapsed >= shootingStar.duration) {
         shootingStar = null;
-        nextShootingStarIn = 5 + Math.random() * 4;
       }
-      return;
     }
 
-    nextShootingStarIn -= elapsedSeconds;
     if (nextShootingStarIn <= 0) {
-      const speed = Math.min(440, Math.max(180, width * 0.34));
-      const angle = 0.38;
+      const direction = Math.random() < 0.5 ? 1 : -1;
+      const startX = width * (0.08 + Math.random() * 0.2);
+      const distanceX = direction * width * (0.53 + Math.random() * 0.18);
+      const distanceY = Math.min(height * 0.3, Math.abs(distanceX) * (0.28 + Math.random() * 0.24));
+      const duration = 0.82 + Math.random() * 0.54;
+      const tailLength = Math.min(isMobile ? 145 : 290, Math.max(78, width * 0.25));
+      const tailScale = tailLength / Math.hypot(distanceX, distanceY);
+
       shootingStar = {
-        x: width * (0.15 + Math.random() * 0.55),
-        y: height * Math.random() * 0.35,
-        vx: speed * Math.cos(angle),
-        vy: speed * Math.sin(angle),
+        x: direction === 1 ? startX : width - startX,
+        y: height * (0.12 + Math.random() * 0.56),
+        vx: distanceX / duration,
+        vy: distanceY / duration,
         elapsed: 0,
-        duration: 0.85,
-        tailLength: Math.min(110, Math.max(58, width * 0.08)),
+        duration,
+        tailX: distanceX * tailScale,
+        tailY: distanceY * tailScale,
       };
+      nextShootingStarIn = starInterval();
     }
   };
 
@@ -212,7 +253,7 @@ function initializeNetworkBackground(canvas) {
     const projected = particles
       .map(projectParticle)
       .sort((a, b) => b.z - a.z);
-    const connections = new Uint8Array(particles.length);
+    connections.fill(0);
     const maxScreenDistance = isMobile ? 105 : 135;
     const maxWorldDistance = Math.min(
       190,
@@ -248,14 +289,13 @@ function initializeNetworkBackground(canvas) {
 
         const screenX = first.x - second.x;
         const screenY = first.y - second.y;
-        if (
-          screenX * screenX + screenY * screenY >
-          maxScreenDistanceSquared
-        ) {
+        const screenDistanceSquared = screenX * screenX + screenY * screenY;
+        if (screenDistanceSquared >= maxScreenDistanceSquared) {
           continue;
         }
 
-        context.globalAlpha = (first.brightness + second.brightness) / 2;
+        const proximity = 1 - screenDistanceSquared / maxScreenDistanceSquared;
+        context.globalAlpha = ((first.brightness + second.brightness) / 2) * proximity;
         context.lineWidth = 0.55 + context.globalAlpha * 0.55;
         context.shadowBlur = 3 + context.globalAlpha * 3;
         context.beginPath();
@@ -291,15 +331,16 @@ function initializeNetworkBackground(canvas) {
       return;
     }
 
-    const elapsedSeconds =
-      lastFrameTime === null ? 0 : Math.min((time - lastFrameTime) / 1000, 0.05);
+    const frameSeconds = lastFrameTime === null ? 0 : (time - lastFrameTime) / 1000;
+    const elapsedSeconds = Math.min(frameSeconds, 0.05);
+    const particleStep = elapsedSeconds * (reducedMotion.matches ? 0.65 : 1);
     lastFrameTime = time;
     animationElapsed += elapsedSeconds;
 
     for (const particle of particles) {
-      particle.x += particle.vx * elapsedSeconds;
-      particle.y += particle.vy * elapsedSeconds;
-      particle.z += particle.vz * elapsedSeconds;
+      particle.x += particle.vx * particleStep;
+      particle.y += particle.vy * particleStep;
+      particle.z += particle.vz * particleStep;
 
       if (particle.z < 0 || particle.z > depthRange) {
         particle.vz *= -1;
@@ -319,7 +360,7 @@ function initializeNetworkBackground(canvas) {
       }
     }
 
-    if (isMobile) {
+    if (isMobile && !reducedMotion.matches) {
       targetParallaxX = Math.sin(animationElapsed * 0.22) * 8;
       targetParallaxY = Math.cos(animationElapsed * 0.17) * 5;
     }
@@ -327,7 +368,7 @@ function initializeNetworkBackground(canvas) {
     parallaxX += (targetParallaxX - parallaxX) * parallaxEase;
     parallaxY += (targetParallaxY - parallaxY) * parallaxEase;
 
-    updateShootingStar(elapsedSeconds);
+    updateShootingStar(frameSeconds);
     draw();
     startAnimation();
   };
@@ -358,10 +399,16 @@ function initializeNetworkBackground(canvas) {
       startAnimation();
     }
   });
+  reducedMotion.addEventListener("change", () => {
+    if (reducedMotion.matches) {
+      targetParallaxX = 0;
+      targetParallaxY = 0;
+    }
+  });
   window.addEventListener(
     "pointermove",
     (event) => {
-      if (!isMobile) {
+      if (!isMobile && event.pointerType === "mouse" && !reducedMotion.matches) {
         targetParallaxX = (event.clientX / width - 0.5) * 24;
         targetParallaxY = (event.clientY / height - 0.5) * 18;
       }
@@ -374,6 +421,6 @@ function initializeNetworkBackground(canvas) {
   });
   new MutationObserver(() => {
     updateColors();
-    draw();
+    if (!document.hidden) draw();
   }).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
 }
