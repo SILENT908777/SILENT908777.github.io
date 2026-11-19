@@ -66,6 +66,9 @@ function initializeNetworkBackground(canvas) {
   let animationFrame = null;
   let width = 0;
   let height = 0;
+  let focalLength = 0;
+  let depthRange = 0;
+  let isMobile = false;
   let dotColor = "";
   let alternateDotColor = "";
   let lineColor = "";
@@ -73,6 +76,11 @@ function initializeNetworkBackground(canvas) {
   let shootingStar = null;
   let nextShootingStarIn = 2.5 + Math.random() * 2;
   let lastFrameTime = null;
+  let animationElapsed = 0;
+  let parallaxX = 0;
+  let parallaxY = 0;
+  let targetParallaxX = 0;
+  let targetParallaxY = 0;
 
   const updateColors = () => {
     const styles = getComputedStyle(root);
@@ -83,24 +91,39 @@ function initializeNetworkBackground(canvas) {
   };
 
   const createParticles = () => {
-    const isMobile = width <= 600;
     const particleCount = Math.min(
       isMobile ? 38 : 70,
       Math.max(isMobile ? 14 : 22, Math.floor((width * height) / 16000))
     );
 
-    particles = Array.from({ length: particleCount }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 13.2,
-      vy: (Math.random() - 0.5) * 13.2,
-    }));
+    particles = Array.from({ length: particleCount }, () => {
+      const z = Math.random() * depthRange;
+      const scale = focalLength / (focalLength + z);
+
+      return {
+        x: (Math.random() - 0.5) * (width / scale),
+        y: (Math.random() - 0.5) * (height / scale),
+        z,
+        vx: (Math.random() - 0.5) * 13.2,
+        vy: (Math.random() - 0.5) * 13.2,
+        vz: (Math.random() - 0.5) * 28,
+      };
+    });
   };
 
   const resize = () => {
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     width = window.innerWidth;
     height = window.innerHeight;
+    isMobile = width <= 600 || window.matchMedia("(pointer: coarse)").matches;
+    focalLength = Math.max(280, Math.min(width, height) * 0.9);
+    depthRange = Math.max(420, Math.min(width, height) * 0.9);
+
+    if (isMobile) {
+      targetParallaxX = 0;
+      targetParallaxY = 0;
+    }
+
     canvas.width = Math.round(width * pixelRatio);
     canvas.height = Math.round(height * pixelRatio);
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -168,49 +191,93 @@ function initializeNetworkBackground(canvas) {
     }
   };
 
+  const projectParticle = (particle, index) => {
+    const scale = focalLength / (focalLength + particle.z);
+    const depth = particle.z / depthRange;
+    const depthBrightness = 1 - depth;
+
+    return {
+      index,
+      particle,
+      z: particle.z,
+      x: width / 2 + particle.x * scale + parallaxX * depth,
+      y: height / 2 + particle.y * scale + parallaxY * depth,
+      radius: 1 + depthBrightness * 1.4,
+      brightness: 0.34 + depthBrightness * 0.66,
+    };
+  };
+
   const draw = () => {
     context.clearRect(0, 0, width, height);
+    const projected = particles
+      .map(projectParticle)
+      .sort((a, b) => b.z - a.z);
+    const connections = new Uint8Array(particles.length);
+    const maxScreenDistance = isMobile ? 105 : 135;
+    const maxWorldDistance = Math.min(
+      190,
+      Math.max(130, Math.min(width, height) * 0.24)
+    );
+    const maxScreenDistanceSquared = maxScreenDistance * maxScreenDistance;
+    const maxWorldDistanceSquared = maxWorldDistance * maxWorldDistance;
+
+    context.lineCap = "round";
     context.strokeStyle = lineColor;
-    context.lineWidth = 1;
     context.shadowColor = glowColor;
 
-    const connections = new Uint8Array(particles.length);
-    const maxDistance = width <= 600 ? 105 : 135;
-    const maxConnections = 4;
+    for (let i = 0; i < projected.length; i += 1) {
+      const first = projected[i];
+      const firstParticle = first.particle;
 
-    for (let i = 0; i < particles.length; i += 1) {
-      const particle = particles[i];
-      context.fillStyle = i % 2 === 0 ? dotColor : alternateDotColor;
-      context.shadowBlur = 9;
-      context.beginPath();
-      context.arc(particle.x, particle.y, 1.5, 0, Math.PI * 2);
-      context.fill();
-
-      context.shadowBlur = 5;
-      for (let j = i + 1; j < particles.length; j += 1) {
+      for (let j = i + 1; j < projected.length; j += 1) {
         if (
-          connections[i] >= maxConnections ||
-          connections[j] >= maxConnections
+          connections[first.index] >= 4 ||
+          connections[projected[j].index] >= 4
         ) {
           continue;
         }
 
-        const other = particles[j];
-        const dx = particle.x - other.x;
-        const dy = particle.y - other.y;
-        if (dx * dx + dy * dy > maxDistance * maxDistance) {
+        const second = projected[j];
+        const secondParticle = second.particle;
+        const dx = firstParticle.x - secondParticle.x;
+        const dy = firstParticle.y - secondParticle.y;
+        const dz = firstParticle.z - secondParticle.z;
+        if (dx * dx + dy * dy + dz * dz > maxWorldDistanceSquared) {
           continue;
         }
 
+        const screenX = first.x - second.x;
+        const screenY = first.y - second.y;
+        if (
+          screenX * screenX + screenY * screenY >
+          maxScreenDistanceSquared
+        ) {
+          continue;
+        }
+
+        context.globalAlpha = (first.brightness + second.brightness) / 2;
+        context.lineWidth = 0.55 + context.globalAlpha * 0.55;
+        context.shadowBlur = 3 + context.globalAlpha * 3;
         context.beginPath();
-        context.moveTo(particle.x, particle.y);
-        context.lineTo(other.x, other.y);
+        context.moveTo(first.x, first.y);
+        context.lineTo(second.x, second.y);
         context.stroke();
-        connections[i] += 1;
-        connections[j] += 1;
+        connections[first.index] += 1;
+        connections[second.index] += 1;
       }
     }
 
+    for (const point of projected) {
+      context.globalAlpha = point.brightness;
+      context.fillStyle =
+        point.index % 2 === 0 ? dotColor : alternateDotColor;
+      context.shadowBlur = 4 + point.brightness * 5;
+      context.beginPath();
+      context.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.globalAlpha = 1;
     context.shadowBlur = 0;
     if (shootingStar) {
       drawShootingStar();
@@ -227,20 +294,38 @@ function initializeNetworkBackground(canvas) {
     const elapsedSeconds =
       lastFrameTime === null ? 0 : Math.min((time - lastFrameTime) / 1000, 0.05);
     lastFrameTime = time;
+    animationElapsed += elapsedSeconds;
 
     for (const particle of particles) {
       particle.x += particle.vx * elapsedSeconds;
       particle.y += particle.vy * elapsedSeconds;
+      particle.z += particle.vz * elapsedSeconds;
 
-      if (particle.x < 0 || particle.x > width) {
-        particle.vx *= -1;
-        particle.x = Math.max(0, Math.min(width, particle.x));
+      if (particle.z < 0 || particle.z > depthRange) {
+        particle.vz *= -1;
+        particle.z = Math.max(0, Math.min(depthRange, particle.z));
       }
-      if (particle.y < 0 || particle.y > height) {
+
+      const scale = focalLength / (focalLength + particle.z);
+      const halfWidth = width / (2 * scale);
+      const halfHeight = height / (2 * scale);
+      if (particle.x < -halfWidth || particle.x > halfWidth) {
+        particle.vx *= -1;
+        particle.x = Math.max(-halfWidth, Math.min(halfWidth, particle.x));
+      }
+      if (particle.y < -halfHeight || particle.y > halfHeight) {
         particle.vy *= -1;
-        particle.y = Math.max(0, Math.min(height, particle.y));
+        particle.y = Math.max(-halfHeight, Math.min(halfHeight, particle.y));
       }
     }
+
+    if (isMobile) {
+      targetParallaxX = Math.sin(animationElapsed * 0.22) * 8;
+      targetParallaxY = Math.cos(animationElapsed * 0.17) * 5;
+    }
+    const parallaxEase = 1 - Math.exp(-elapsedSeconds * 3);
+    parallaxX += (targetParallaxX - parallaxX) * parallaxEase;
+    parallaxY += (targetParallaxY - parallaxY) * parallaxEase;
 
     updateShootingStar(elapsedSeconds);
     draw();
@@ -272,6 +357,20 @@ function initializeNetworkBackground(canvas) {
     } else {
       startAnimation();
     }
+  });
+  window.addEventListener(
+    "pointermove",
+    (event) => {
+      if (!isMobile) {
+        targetParallaxX = (event.clientX / width - 0.5) * 24;
+        targetParallaxY = (event.clientY / height - 0.5) * 18;
+      }
+    },
+    { passive: true }
+  );
+  document.addEventListener("pointerleave", () => {
+    targetParallaxX = 0;
+    targetParallaxY = 0;
   });
   new MutationObserver(() => {
     updateColors();
